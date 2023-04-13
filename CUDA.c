@@ -4,6 +4,9 @@
 #include <math.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <cuda.h>
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 /*zegar, obecnie ustawiony na 5 minut*/
 bool time_controller = false;
 void* timerThread(void* arg) {
