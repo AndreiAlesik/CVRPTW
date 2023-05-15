@@ -58,59 +58,50 @@ void clients_push_back(struct client_list** head_reference, struct client_list**
 	if (*head_reference == NULL) *head_reference = newclient;
 }
 /*rozczerzenie listy rozwiązań*/
-#include <omp.h>
-
-/*rozczerzenie listy rozwiązań*/
 void add_solution(struct solution_list** headRef, struct track_list* begin) {
-  struct solution_list* cur = *headRef;
-  struct solution_list* client = malloc(sizeof(struct solution_list));
-  client->start = begin;
-  client->next = NULL;
+	struct solution_list* cur = *headRef;
+	struct solution_list* client = malloc(sizeof(struct solution_list));
+	client->start = begin;
+	client->next = NULL;
 
-  if (cur == NULL) {
-    *headRef = client;
-  }
-  else {
-    while (cur->next != NULL) {
-      cur = cur->next;
-    }
-    cur->next = client;
-  }
+	if (cur == NULL) {
+		*headRef = client;
+	}
+	else {
+		while (cur->next != NULL) {
+			cur = cur->next;
+		}
+		cur->next = client;
+	}
 }
-
 /*odświerzanie list track_list i customer list*/
 void add_track(struct track_list** pointer, struct client_list* customer, int cur_cost) {
-  struct track_list* cur = *pointer;
+	struct track_list* cur = *pointer;
 
-  struct track_list* node = malloc(sizeof(struct track_list));
-  node->customer = customer;
-  node->cur_cost = cur_cost;
-  node->next = NULL;
+	struct track_list* node = malloc(sizeof(struct track_list));
+	node->customer = customer;
+	node->cur_cost = cur_cost;
+	node->next = NULL;
 
-  #pragma omp critical
-  {
-    if (cur == NULL) {
-      *pointer = node;
-    }
-    else {
-      while (cur->next != NULL) {
-        cur = cur->next;
-      }
-      cur->next = node;
-    }
-  }
+	if (cur == NULL) {
+		*pointer = node;
+	}
+	else {
+		while (cur->next != NULL) {
+			cur = cur->next;
+		}
+		cur->next = node;
+	}
 }
-
 /*czyszczenie pamięci*/
 void clean_clients(struct client_list** head_reference) {
-  struct client_list* client;
-  while (*head_reference != NULL) {
-    client = *head_reference;
-    *head_reference = (*head_reference)->next;
-    free(client);
-  }
+	struct client_list* client;
+	while (*head_reference != NULL) {
+		client = *head_reference;
+		*head_reference = (*head_reference)->next;
+		free(client);
+	}
 }
-
 /*selection sort*/
 void Selection_sort(struct sorted_clients tab[], int n) {
 	unsigned long int i, j, min;
@@ -193,7 +184,10 @@ int main(int argc, char** argv) {
 	struct solution_list* solution = NULL; /*lista przechowywanych rozwiązań*/
 	struct track_list* current_track = NULL;   /* początek trasy*/
 	client = NULL;
-
+	#pragma omp parallel
+	{
+		#pragma omp single
+		{
 	while (head != NULL && time_controller && vehicle_count != -1) {
 		cur_vertex = 0;                  
 		prev_x = x_depot; /*koordynata poprzedniego wierzchołka X*/
@@ -204,6 +198,8 @@ int main(int argc, char** argv) {
 		prev_road = 0;                /*droga do depota*/
 
 		vehicle_count++;
+		#pragma omp task
+				{
 		while (cur_vertex < i && track_q>0 && time_controller) {
 			while (cur_vertex < i && (double)sorted_list_of_clients[cur_vertex].l < current_cost) cur_vertex++;
 			if (cur_vertex < i) {
@@ -235,10 +231,12 @@ int main(int argc, char** argv) {
 			}
 			cur_vertex++;
 		}
+		}
 
 		add_solution(&solution, current_track);
 		total_cost += current_cost + prev_road - (double)e_depot;
 	}
+	}}
 	/* kompletne rozwiązanie w przypadku zakończenia danego limitu czasu */
 	if (!time_controller && head != NULL) {
 		current_track = NULL;
